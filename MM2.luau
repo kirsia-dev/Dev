@@ -72,9 +72,9 @@ local MiscTab = nil
 
 pcall(function()
 	InfoTab = Window:Tab({ Title = "Information", Icon = "info" })
-	MainTab = Window:Tab({ Title = "Main", Icon = "swords" })
+	MainTab = Window:Tab({ Title = "Main", Icon = "landmark" })
 	VisualTab = Window:Tab({ Title = "Visual", Icon = "eye" })
-	MiscTab = Window:Tab({ Title = "Misc", Icon = "sparkles" })
+	MiscTab = Window:Tab({ Title = "Misc", Icon = "cog" })
 end)
 
 -- Flags
