@@ -172,6 +172,7 @@ local function clearAllESPHighlights()
 		if plr.Character then
 			pcall(function() plr.Character:FindFirstChild("RoleHighlight"):Destroy() end)
 			pcall(function() plr.Character:FindFirstChild("GunHighlight"):Destroy() end)
+			pcall(function() plr.Character:FindFirstChild("RoleChams"):Destroy() end)
 		end
 	end
 	local gunFolder = Workspace:FindFirstChild("Guns")
@@ -367,7 +368,7 @@ Players.PlayerRemoving:Connect(function(player)
 	if textObj then textObj:Remove() distanceTexts[player] = nil end
 end)
 
--- Cleanup on UI close
+-- Cleanup on UI close / script stop
 local function cleanupAll()
 	resetAllFlags()
 	clearAllESPHighlights()
@@ -375,11 +376,13 @@ local function cleanupAll()
 	stopCoinFarmTween()
 	setXray(false)
 
+	-- Hapus semua drawing distance
 	for _, textObj in pairs(distanceTexts) do
 		if textObj then textObj:Remove() end
 	end
 	table.clear(distanceTexts)
 
+	-- Hapus sisa RoleChams (seharusnya sudah di clearAllESPHighlights, tapi aman)
 	for _, plr in pairs(Players:GetPlayers()) do
 		if plr.Character then
 			local hl = plr.Character:FindFirstChild("RoleChams")
@@ -387,15 +390,20 @@ local function cleanupAll()
 		end
 	end
 
+	-- Kembalikan transparansi xray (sudah di setXray(false), tapi pastikan)
 	for obj, originalTrans in pairs(originalTransparencies) do
 		if obj and obj.Parent then pcall(function() obj.Transparency = originalTrans end) end
 	end
 	table.clear(originalTransparencies)
 end
 
+-- Pastikan cleanup dipanggil saat UI dihancurkan
 if Window.Instance then
+	Window.Instance.Destroying:Connect(cleanupAll)
 	Window.Instance.AncestryChanged:Connect(function()
-		if not Window.Instance.Parent then cleanupAll() end
+		if not Window.Instance.Parent then
+			cleanupAll()
+		end
 	end)
 end
 
