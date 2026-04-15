@@ -1,4 +1,3 @@
--- Suppress console warnings
 local warnings_suppressed = true
 if warnings_suppressed then
 	local _warn = warn
@@ -18,7 +17,6 @@ local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Anti-AFK
 LocalPlayer.Idled:Connect(function()
 	pcall(function()
 		VirtualUser:CaptureController()
@@ -26,7 +24,6 @@ LocalPlayer.Idled:Connect(function()
 	end)
 end)
 
--- Premium Check
 local premium = false
 pcall(function()
 	if readfile and isfile and isfile("Zyphrax Hub/MM2/premium.txt") then
@@ -35,7 +32,6 @@ pcall(function()
 	end
 end)
 
--- Load UI Library
 local uiSource = nil
 local okUi = pcall(function()
 	uiSource = game:HttpGet("https://raw.githubusercontent.com/Moonshall/ZyphraxHub/refs/heads/main/mainui.lua")
@@ -67,14 +63,12 @@ pcall(function()
 	MiscTab = Window:Tab({ Title = "Misc", Icon = "cog" })
 end)
 
--- Flags
 local flags = {
 	killAll = false, autoShoot = false, autoTakeGun = false, autoFarmCoin = false,
 	espRole = false, espGunDrop = false, fly = false, noclip = false,
 	xray = false, aimbot = false, espRoleChams = false, espDistance = false,
 }
 
--- Config
 local cfg = {
 	selectedPlayer = nil, speedHack = 16, jumpPower = 50,
 	flySpeed = 25, coinSpeed = 25,
@@ -86,8 +80,8 @@ local rolesCache = {}
 local flyState = { velocity = nil, gyro = nil }
 local coinFarmState = { tween = nil, target = nil, lastCollect = 0 }
 local distanceTexts = {}
+local uiActive = true
 
--- Helper Functions
 local function getRoot(character)
 	return character and character:FindFirstChild("HumanoidRootPart")
 end
@@ -171,8 +165,8 @@ local function clearAllESPHighlights()
 	for _, plr in pairs(Players:GetPlayers()) do
 		if plr.Character then
 			pcall(function() plr.Character:FindFirstChild("RoleHighlight"):Destroy() end)
-			pcall(function() plr.Character:FindFirstChild("GunHighlight"):Destroy() end)
 			pcall(function() plr.Character:FindFirstChild("RoleChams"):Destroy() end)
+			pcall(function() plr.Character:FindFirstChild("GunHighlight"):Destroy() end)
 		end
 	end
 	local gunFolder = Workspace:FindFirstChild("Guns")
@@ -184,6 +178,7 @@ local function clearAllESPHighlights()
 end
 
 local function applyRoleESP()
+	if not uiActive then return end
 	if not flags.espRole then return end
 	pcall(function()
 		local roles = getRoles()
@@ -296,8 +291,8 @@ local function performAimbot()
 	end
 end
 
--- ESP Update
 local function updateESP()
+	if not uiActive then return end
 	local camera = Workspace.CurrentCamera
 	if not camera then return end
 	local myRoot = getRoot(LocalPlayer.Character)
@@ -307,7 +302,6 @@ local function updateESP()
 		local character = plr.Character
 		if not character then continue end
 
-		-- Role Chams (Full Body Highlight)
 		if flags.espRoleChams then
 			local role = rolesCache[plr.Name] or "Innocent"
 			if role == "Hero" then role = "Sheriff" end
@@ -329,7 +323,6 @@ local function updateESP()
 			if hl then hl.Enabled = false end
 		end
 
-		-- Distance Text
 		if flags.espDistance and myRoot then
 			local root = getRoot(character)
 			if root then
@@ -368,36 +361,25 @@ Players.PlayerRemoving:Connect(function(player)
 	if textObj then textObj:Remove() distanceTexts[player] = nil end
 end)
 
--- Cleanup on UI close / script stop
 local function cleanupAll()
+	uiActive = false
 	resetAllFlags()
 	clearAllESPHighlights()
 	clearFlyForces()
 	stopCoinFarmTween()
 	setXray(false)
 
-	-- Hapus semua drawing distance
 	for _, textObj in pairs(distanceTexts) do
 		if textObj then textObj:Remove() end
 	end
 	table.clear(distanceTexts)
 
-	-- Hapus sisa RoleChams (seharusnya sudah di clearAllESPHighlights, tapi aman)
-	for _, plr in pairs(Players:GetPlayers()) do
-		if plr.Character then
-			local hl = plr.Character:FindFirstChild("RoleChams")
-			if hl then hl:Destroy() end
-		end
-	end
-
-	-- Kembalikan transparansi xray (sudah di setXray(false), tapi pastikan)
 	for obj, originalTrans in pairs(originalTransparencies) do
 		if obj and obj.Parent then pcall(function() obj.Transparency = originalTrans end) end
 	end
 	table.clear(originalTransparencies)
 end
 
--- Pastikan cleanup dipanggil saat UI dihancurkan
 if Window.Instance then
 	Window.Instance.Destroying:Connect(cleanupAll)
 	Window.Instance.AncestryChanged:Connect(function()
@@ -407,7 +389,6 @@ if Window.Instance then
 	end)
 end
 
--- UI Construction
 do
 	if InfoTab then
 		pcall(function()
@@ -650,7 +631,6 @@ end
 resetAllFlags()
 clearAllESPHighlights()
 
--- Main Loop
 RunService.Heartbeat:Connect(function()
 	getRoles()
 	updateESP()
