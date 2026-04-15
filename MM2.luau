@@ -13,9 +13,12 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 local MarketplaceService = game:GetService("MarketplaceService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 
+-- Anti-AFK
 LocalPlayer.Idled:Connect(function()
 	pcall(function()
 		VirtualUser:CaptureController()
@@ -34,7 +37,6 @@ pcall(function()
 	end
 end)
 
--- Loading Screen
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 -- Load UI Library
@@ -77,7 +79,6 @@ pcall(function()
 	MiscTab = Window:Tab({ Title = "Misc", Icon = "cog" })
 end)
 
--- Flags
 local flags = {
 	killAll = false,
 	autoShoot = false,
@@ -88,9 +89,14 @@ local flags = {
 	fullBodyChams = false,
 	fly = false,
 	noclip = false,
+	xray = false,
+	aimbot = false,
+	espBox = false,
+	espLine = false,
+	espName = false,
+	espHighlight = false,
 }
 
--- Config
 local cfg = {
 	selectedPlayer = nil,
 	speedHack = 16,
@@ -99,10 +105,9 @@ local cfg = {
 	coinSpeed = 25,
 }
 
--- Player dropdown global
 local playerDropdown = nil
+local originalTransparencies = {}
 
--- Helper Functions
 local function getRoot(character)
 	if not character then return nil end
 	return character:FindFirstChild("HumanoidRootPart")
@@ -347,7 +352,213 @@ local function ensureFlyForces(rootPart)
 	end
 end
 
--- === INFORMATION TAB ===
+local function setXray(enabled)
+	if enabled then
+		for _, obj in ipairs(Workspace:GetDescendants()) do
+			if obj:IsA("BasePart") and not obj:IsDescendantOf(LocalPlayer.Character) then
+				if not obj:FindFirstChild("HumanoidRootPart") and not obj.Parent:FindFirstChild("Humanoid") then
+					if not originalTransparencies[obj] then
+						originalTransparencies[obj] = obj.Transparency
+					end
+					obj.Transparency = 0.7
+				end
+			end
+		end
+	else
+		for obj, originalTrans in pairs(originalTransparencies) do
+			if obj and obj.Parent then
+				pcall(function()
+					obj.Transparency = originalTrans
+				end)
+			end
+		end
+		table.clear(originalTransparencies)
+	end
+end
+
+local function performAimbot()
+	if not flags.aimbot then return end
+	local roles = getRoles()
+	local targetPlayer = nil
+	for plrName, role in pairs(roles) do
+		if role == "Murderer" then
+			targetPlayer = Players:FindFirstChild(plrName)
+			break
+		end
+	end
+	if targetPlayer and targetPlayer.Character then
+		local targetRoot = getRoot(targetPlayer.Character)
+		local myRoot = getRoot(LocalPlayer.Character)
+		if targetRoot and myRoot then
+			local camera = Workspace.CurrentCamera
+			local lookAt = CFrame.lookAt(myRoot.Position, targetRoot.Position)
+			camera.CFrame = lookAt
+		end
+	end
+end
+
+-- ==================== PLAYER ESP ====================
+local playerESP = {}
+
+local function createESP(player)
+	if player == LocalPlayer then return end
+	if playerESP[player] then return end
+	
+	local esp = {}
+	
+	esp.Box = Drawing.new("Square")
+	esp.Box.Visible = false
+	esp.Box.Thickness = 2
+	esp.Box.Color = Color3.fromRGB(255, 255, 255)
+	esp.Box.Filled = false
+	
+	esp.Line = Drawing.new("Line")
+	esp.Line.Visible = false
+	esp.Line.Thickness = 1
+	esp.Line.Color = Color3.fromRGB(255, 255, 255)
+	
+	esp.NameTag = Drawing.new("Text")
+	esp.NameTag.Visible = false
+	esp.NameTag.Size = 14
+	esp.NameTag.Color = Color3.fromRGB(255, 255, 255)
+	esp.NameTag.Center = true
+	esp.NameTag.Outline = true
+	esp.NameTag.OutlineColor = Color3.new(0,0,0)
+	
+	esp.Highlight = nil
+	
+	playerESP[player] = esp
+end
+
+local function removeESP(player)
+	local esp = playerESP[player]
+	if not esp then return end
+	
+	if esp.Box then esp.Box:Remove() end
+	if esp.Line then esp.Line:Remove() end
+	if esp.NameTag then esp.NameTag:Remove() end
+	if esp.Highlight then esp.Highlight:Destroy() end
+	
+	playerESP[player] = nil
+end
+
+local function updatePlayerESP()
+	local camera = Workspace.CurrentCamera
+	if not camera then return end
+	
+	for player, esp in pairs(playerESP) do
+		local character = player.Character
+		local root = character and getRoot(character)
+		local humanoid = character and getHumanoid(character)
+		
+		if not root or not humanoid or humanoid.Health <= 0 then
+			if esp.Box then esp.Box.Visible = false end
+			if esp.Line then esp.Line.Visible = false end
+			if esp.NameTag then esp.NameTag.Visible = false end
+			if esp.Highlight then esp.Highlight.Enabled = false end
+			continue
+		end
+		
+		local rootPos = root.Position
+		local screenPos, onScreen = camera:WorldToViewportPoint(rootPos)
+		local isVisible = onScreen and (rootPos - camera.CFrame.Position).Magnitude < 500
+		
+		-- Box
+		if flags.espBox and esp.Box then
+			esp.Box.Visible = isVisible
+			if isVisible then
+				local head = character:FindFirstChild("Head")
+				local hrp = root
+				if head and hrp then
+					local headPos = head.Position
+					local hrpPos = hrp.Position
+					local height = (headPos - hrpPos).Magnitude
+					local width = height * 0.6
+					
+					local top = camera:WorldToViewportPoint(headPos + Vector3.new(0, 0.5, 0))
+					local bottom = camera:WorldToViewportPoint(hrpPos - Vector3.new(0, height*0.5, 0))
+					
+					local boxWidth = width * (1000 / math.max((rootPos - camera.CFrame.Position).Magnitude, 1))
+					esp.Box.Size = Vector2.new(boxWidth, math.abs(top.Y - bottom.Y))
+					esp.Box.Position = Vector2.new(screenPos.X - boxWidth/2, top.Y)
+					
+					local role = rolesCache[player.Name] or "Innocent"
+					if role == "Hero" then role = "Sheriff" end
+					esp.Box.Color = RoleColors[role] or RoleColors.Innocent
+				end
+			end
+		elseif esp.Box then
+			esp.Box.Visible = false
+		end
+		
+		-- Line
+		if flags.espLine and esp.Line then
+			esp.Line.Visible = isVisible
+			if isVisible then
+				local viewportSize = camera.ViewportSize
+				esp.Line.From = Vector2.new(viewportSize.X/2, viewportSize.Y)
+				esp.Line.To = Vector2.new(screenPos.X, screenPos.Y)
+				local role = rolesCache[player.Name] or "Innocent"
+				if role == "Hero" then role = "Sheriff" end
+				esp.Line.Color = RoleColors[role] or RoleColors.Innocent
+			end
+		elseif esp.Line then
+			esp.Line.Visible = false
+		end
+		
+		-- Name
+		if flags.espName and esp.NameTag then
+			esp.NameTag.Visible = isVisible
+			if isVisible then
+				esp.NameTag.Text = player.Name
+				esp.NameTag.Position = Vector2.new(screenPos.X, screenPos.Y - 40)
+				local role = rolesCache[player.Name] or "Innocent"
+				if role == "Hero" then role = "Sheriff" end
+				esp.NameTag.Color = RoleColors[role] or RoleColors.Innocent
+			end
+		elseif esp.NameTag then
+			esp.NameTag.Visible = false
+		end
+		
+		-- Highlight
+		if flags.espHighlight then
+			if not esp.Highlight then
+				esp.Highlight = Instance.new("Highlight")
+				esp.Highlight.Name = "PlayerHighlight"
+				esp.Highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+				esp.Highlight.FillTransparency = 0.5
+				esp.Highlight.OutlineTransparency = 0
+				esp.Highlight.Parent = character
+			end
+			esp.Highlight.Enabled = true
+			local role = rolesCache[player.Name] or "Innocent"
+			if role == "Hero" then role = "Sheriff" end
+			esp.Highlight.FillColor = RoleColors[role] or RoleColors.Innocent
+			esp.Highlight.OutlineColor = Color3.new(1,1,1)
+		elseif esp.Highlight then
+			esp.Highlight.Enabled = false
+		end
+	end
+end
+
+Players.PlayerRemoving:Connect(function(player)
+	removeESP(player)
+end)
+
+for _, player in pairs(Players:GetPlayers()) do
+	if player ~= LocalPlayer then
+		createESP(player)
+	end
+end
+
+Players.PlayerAdded:Connect(function(player)
+	if player ~= LocalPlayer then
+		task.wait(0.5)
+		createESP(player)
+	end
+end)
+
+-- ==================== UI TABS ====================
 if InfoTab then
 	pcall(function()
 		InfoTab:Section({ Title = "Information" })
@@ -371,12 +582,26 @@ if InfoTab then
 	end)
 end
 
--- === MAIN TAB ===
 if MainTab then
 	pcall(function()
-		MainTab:Section({ Title = "Murder" })
+		MainTab:Section({ Title = "Aim" })
+		MainTab:Toggle({
+			Title = "Aimbot (Murder)",
+			Callback = function(state)
+				flags.aimbot = state
+			end,
+		})
+		MainTab:Toggle({
+			Title = "Auto Shoot (Murder)",
+			Callback = function(state)
+				flags.autoShoot = state
+				if state then notify("Auto Shoot", "Enabled") else notify("Auto Shoot", "Disabled") end
+			end,
+		})
 	end)
+
 	pcall(function()
+		MainTab:Section({ Title = "Murder" })
 		MainTab:Toggle({
 			Title = "Kill All",
 			Callback = function(state)
@@ -384,8 +609,7 @@ if MainTab then
 				if state then notify("Kill All", "Enabled") else notify("Kill All", "Disabled") end
 			end,
 		})
-	end)
-	pcall(function()
+		
 		local initialPlayers = getPlayerNames()
 		local dropdownOptions = initialPlayers
 		if #dropdownOptions == 0 then
@@ -407,8 +631,7 @@ if MainTab then
 				end
 			end,
 		})
-	end)
-	pcall(function()
+		
 		MainTab:Button({
 			Title = "Kill Selected",
 			Callback = function()
@@ -433,17 +656,6 @@ if MainTab then
 
 	pcall(function()
 		MainTab:Section({ Title = "Sheriff" })
-	end)
-	pcall(function()
-		MainTab:Toggle({
-			Title = "Auto Shoot (Murder)",
-			Callback = function(state)
-				flags.autoShoot = state
-				if state then notify("Auto Shoot", "Enabled") else notify("Auto Shoot", "Disabled") end
-			end,
-		})
-	end)
-	pcall(function()
 		MainTab:Toggle({
 			Title = "Auto Take Gun",
 			Callback = function(state)
@@ -454,8 +666,6 @@ if MainTab then
 
 	pcall(function()
 		MainTab:Section({ Title = "Farm" })
-	end)
-	pcall(function()
 		MainTab:Toggle({
 			Title = "Auto Farm Coin",
 			Callback = function(state)
@@ -465,8 +675,6 @@ if MainTab then
 				end
 			end,
 		})
-	end)
-	pcall(function()
 		MainTab:Slider({
 			Title = "Coin Speed",
 			Step = 1,
@@ -478,7 +686,6 @@ if MainTab then
 	end)
 end
 
--- Player dropdown update function
 local function updatePlayerDropdown()
 	if not playerDropdown then return end
 	
@@ -504,10 +711,37 @@ task.delay(0.5, function()
 	updatePlayerDropdown()
 end)
 
--- === VISUAL TAB ===
 if VisualTab then
 	pcall(function()
-		VisualTab:Section({ Title = "ESP" })
+		VisualTab:Section({ Title = "Player ESP" })
+		VisualTab:Toggle({
+			Title = "Box",
+			Callback = function(state)
+				flags.espBox = state
+			end,
+		})
+		VisualTab:Toggle({
+			Title = "Line",
+			Callback = function(state)
+				flags.espLine = state
+			end,
+		})
+		VisualTab:Toggle({
+			Title = "Name",
+			Callback = function(state)
+				flags.espName = state
+			end,
+		})
+		VisualTab:Toggle({
+			Title = "Highlight",
+			Callback = function(state)
+				flags.espHighlight = state
+			end,
+		})
+	end)
+
+	pcall(function()
+		VisualTab:Section({ Title = "Other ESP" })
 		VisualTab:Toggle({
 			Title = "ESP Role",
 			Callback = function(state)
@@ -537,9 +771,19 @@ if VisualTab then
 			end,
 		})
 	end)
+
+	pcall(function()
+		VisualTab:Section({ Title = "World Visuals" })
+		VisualTab:Toggle({
+			Title = "X-Ray",
+			Callback = function(state)
+				flags.xray = state
+				setXray(state)
+			end,
+		})
+	end)
 end
 
--- === MISC TAB ===
 if MiscTab then
 	pcall(function()
 		MiscTab:Section({ Title = "Movement" })
@@ -677,10 +921,36 @@ if MiscTab then
 				end)
 			end,
 		})
+
+		MiscTab:Section({ Title = "Server" })
+		MiscTab:Button({
+			Title = "Rejoin",
+			Callback = function()
+				TeleportService:Teleport(game.PlaceId, LocalPlayer)
+			end,
+		})
+		MiscTab:Button({
+			Title = "Server Hop",
+			Callback = function()
+				local servers = {}
+				pcall(function()
+					local data = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"))
+					for _, server in ipairs(data.data) do
+						if server.playing < server.maxPlayers and server.id ~= game.JobId then
+							table.insert(servers, server.id)
+						end
+					end
+				end)
+				if #servers > 0 then
+					TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[1], LocalPlayer)
+				else
+					TeleportService:Teleport(game.PlaceId, LocalPlayer)
+				end
+			end,
+		})
 	end)
 end
 
--- === FINALIZE UI ===
 if Window then
 	pcall(function() Window:SelectTab(1) end)
 end
@@ -695,13 +965,23 @@ local function resetAllFlags()
 	flags.fullBodyChams = false
 	flags.fly = false
 	flags.noclip = false
+	flags.xray = false
+	flags.aimbot = false
+	flags.espBox = false
+	flags.espLine = false
+	flags.espName = false
+	flags.espHighlight = false
+	setXray(false)
 end
 
 resetAllFlags()
 clearAllESPHighlights()
 
--- === FEATURE LOOPS ===
+-- ==================== MAIN LOOP ====================
 RunService.Heartbeat:Connect(function()
+	getRoles()
+	updatePlayerESP()
+	
 	if flags.killAll then
 		pcall(function()
 			for _, plr in pairs(Players:GetPlayers()) do
@@ -742,6 +1022,10 @@ RunService.Heartbeat:Connect(function()
 				end
 			end
 		end)
+	end
+
+	if flags.aimbot then
+		performAimbot()
 	end
 
 	if flags.autoTakeGun then
