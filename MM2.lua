@@ -477,28 +477,8 @@ do
 		end)
         pcall(function()
 	        MainTab:Section({ Title = "Farm" })
-
-	        MainTab:Toggle({
-		        Title = "Auto Farm Coin",
-		        Callback = function(state)
-			        flags.autoFarmCoin = state
-
-			        if not state then
-				        if stopCoinFarmTween then
-					        pcall(stopCoinFarmTween)
-				        end
-			        end
-		        end
-	         })
-
-	        MainTab:Slider({
-		        Title = "Coin Speed",
-		        Step = 1,
-		        Value = { Min = 1, Max = 100, Default = 25 },
-		        Callback = function(value)
-			        cfg.coinSpeed = value
-		        end
-	        })
+            MainTab:Toggle({ Title = "Auto Farm Coin", Callback = function(state) flags.autoFarmCoin = state if not state then if stopCoinFarmTween then pcall(stopCoinFarmTween) end end end })
+            MainTab:Slider({ Title = "Coin Speed", Step = 1, Value = { Min = 1, Max = 100, Default = 25 }, Callback = function(value) cfg.coinSpeed = value end })
         end)
 
 	local function updatePlayerDropdown()
