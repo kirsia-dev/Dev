@@ -69,15 +69,26 @@ end)
 
 -- Flags
 local flags = {
-	killAll = false, autoShoot = false, autoTakeGun = false, autoFarmCoin = false,
-	espRole = false, espGunDrop = false, fly = false, noclip = false,
-	xray = false, aimbot = false, espRoleChams = false, espDistance = false,
+	killAll = false, 
+	autoShoot = false, 
+	autoTakeGun = false, 
+	autoFarmCoin = false,
+	espGunDrop = false, 
+	fly = false, 
+	noclip = false,
+	xray = false, 
+	aimbot = false, 
+	espRoleChams = false, 
+	espDistance = false,
 }
 
 -- Config
 local cfg = {
-	selectedPlayer = nil, speedHack = 16, jumpPower = 50,
-	flySpeed = 25, coinSpeed = 25,
+	selectedPlayer = nil, 
+	speedHack = 16, 
+	jumpPower = 50,
+	flySpeed = 25, 
+	coinSpeed = 25,
 }
 
 local playerDropdown = nil
@@ -495,7 +506,6 @@ do
 			VisualTab:Toggle({ Title = "Role Chams", Callback = function(state) flags.espRoleChams = state end })
 			VisualTab:Toggle({ Title = "Distance", Callback = function(state) flags.espDistance = state end })
 			VisualTab:Section({ Title = "Other ESP" })
-			VisualTab:Toggle({ Title = "ESP Role (Head)", Callback = function(state) flags.espRole = state end })
 			VisualTab:Toggle({ Title = "ESP Gun Drop", Callback = function(state) flags.espGunDrop = state end })
 			VisualTab:Section({ Title = "World Visuals" })
 			VisualTab:Toggle({ Title = "X-Ray", Callback = function(state) flags.xray = state; setXray(state) end })
@@ -734,28 +744,48 @@ RunService.Heartbeat:Connect(function()
 	    end)
 	end
 
+    if flags.espGunDrop then
+	    pcall(function()
+		    for _, obj in pairs(Workspace:GetDescendants()) do
+			    if obj.Name:lower():find("gun") then
+				    local part = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle")
+				    if part and not part:FindFirstChild("GunHighlight") then
+					    local hl = Instance.new("Highlight")
+					    hl.Name = "GunHighlight"
+					    hl.FillColor = Color3.fromRGB(255, 200, 0)
+					    hl.OutlineColor = Color3.fromRGB(200, 160, 0)
+					    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+					    hl.FillTransparency = 0.4
+					    hl.Parent = part
+				    end
+			    end
+		    end
+	    end)
+	end
 
-
-	if flags.fly and LocalPlayer.Charaif flags.espGunDrop then
-	pcall(function()
-		for _, obj in pairs(Workspace:GetDescendants()) do
-			if obj.Name:lower():find("gun") then
-				local part = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle")
-				if part and not part:FindFirstChild("GunHighlight") then
-					local hl = Instance.new("Highlight")
-					hl.Name = "GunHighlight"
-					hl.FillColor = Color3.fromRGB(255, 200, 0)
-					hl.OutlineColor = Color3.fromRGB(200, 160, 0)
-					hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-					hl.FillTransparency = 0.4
-					hl.Parent = part
+	if flags.espGunDrop then
+		pcall(function()
+			local gunFolder = Workspace:FindFirstChild("Guns")
+			if gunFolder then
+				for _, gun in pairs(gunFolder:GetChildren()) do
+					if gun:IsA("BasePart") or gun:FindFirstChild("Handle") then
+						local gunParent = gun:IsA("BasePart") and gun or gun:FindFirstChild("Handle")
+						if gunParent and gunParent.Parent and not gunParent:FindFirstChild("GunHighlight") then
+							local hl = Instance.new("Highlight")
+							hl.Name = "GunHighlight"
+							hl.FillColor = Color3.fromRGB(255, 200, 0)
+							hl.OutlineColor = Color3.fromRGB(200, 160, 0)
+							hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+							hl.FillTransparency = 0.4
+							hl.Parent = gunParent
+						end
+					end
 				end
 			end
-		end
-	end)
-		end
-			
-		cter then
+		end)
+	end
+
+	if flags.fly and LocalPlayer.Character then
 		local myRoot, humanoid = getRoot(LocalPlayer.Character), getHumanoid(LocalPlayer.Character)
 		if myRoot and humanoid then
 			ensureFlyForces(myRoot)
