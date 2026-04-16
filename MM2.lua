@@ -1,4 +1,3 @@
--- Suppress console warnings
 local warnings_suppressed = true
 if warnings_suppressed then
 	local _warn = warn
@@ -18,7 +17,6 @@ local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Anti-AFK
 LocalPlayer.Idled:Connect(function()
 	pcall(function()
 		VirtualUser:CaptureController()
@@ -26,7 +24,6 @@ LocalPlayer.Idled:Connect(function()
 	end)
 end)
 
--- Premium Check
 local premium = false
 pcall(function()
 	if readfile and isfile and isfile("Zyphrax Hub/MM2/premium.txt") then
@@ -35,7 +32,6 @@ pcall(function()
 	end
 end)
 
--- Load UI Library
 local uiSource = nil
 local okUi = pcall(function()
 	uiSource = game:HttpGet("https://raw.githubusercontent.com/Moonshall/ZyphraxHub/refs/heads/main/mainui.lua")
@@ -67,27 +63,25 @@ pcall(function()
 	MiscTab = Window:Tab({ Title = "Misc", Icon = "cog" })
 end)
 
--- Flags
 local flags = {
-	killAll = false, 
-	autoShoot = false, 
-	autoTakeGun = false, 
+	killAll = false,
+	autoShoot = false,
+	autoTakeGun = false,
 	autoFarmCoin = false,
-	espGunDrop = false, 
-	fly = false, 
+	espGunDrop = false,
+	fly = false,
 	noclip = false,
-	xray = false, 
-	aimbot = false, 
-	espRoleChams = false, 
+	xray = false,
+	aimbot = false,
+	espRoleChams = false,
 	espDistance = false,
 }
 
--- Config
 local cfg = {
-	selectedPlayer = nil, 
-	speedHack = 16, 
+	selectedPlayer = nil,
+	speedHack = 16,
 	jumpPower = 50,
-	flySpeed = 25, 
+	flySpeed = 25,
 	coinSpeed = 25,
 }
 
@@ -95,10 +89,10 @@ local playerDropdown = nil
 local originalTransparencies = {}
 local rolesCache = {}
 local flyState = { velocity = nil, gyro = nil }
-local coinFarmState = { tween = nil, target = nil, lastCollect = 0 }
 local distanceTexts = {}
+local coinFarmConnection = nil
+local coinTweenInfo = TweenInfo.new(2.9, Enum.EasingStyle.Linear)
 
--- Helper Functions
 local function getRoot(character)
 	return character and character:FindFirstChild("HumanoidRootPart")
 end
@@ -163,21 +157,6 @@ local RoleColors = {
 	Innocent = Color3.fromRGB(0, 255, 0)
 }
 
-local function isBagFull()
-	local backpack = LocalPlayer:FindFirstChild("Backpack")
-	if not backpack then return false end
-	local coinCount, maxCoins = 0, 40
-	pcall(function()
-		if MarketplaceService:UserOwnsAsset(LocalPlayer.UserId, 3878455) then maxCoins = 50 end
-	end)
-	for _, item in pairs(backpack:GetChildren()) do
-		if item.Name == "Coin" or item.Name:lower():find("coin") then
-			coinCount = coinCount + 1
-		end
-	end
-	return coinCount >= maxCoins
-end
-
 local function clearAllESPHighlights()
 	for _, plr in pairs(Players:GetPlayers()) do
 		if plr.Character then
@@ -193,47 +172,44 @@ local function clearAllESPHighlights()
 	end
 end
 
-local function applyRoleESP()
-	if not flags.espRole then return end
-	pcall(function()
-		local roles = getRoles()
-		for _, plr in pairs(Players:GetPlayers()) do
-			if plr ~= LocalPlayer and plr.Character then
-				local role = roles[plr.Name] or "Innocent"
-				if role == "Hero" then role = "Sheriff" end
-				local color = RoleColors[role] or RoleColors.Innocent
-				local head = plr.Character:FindFirstChild("Head")
-				if head then
-					local hl = plr.Character:FindFirstChild("RoleHighlight")
-					if not hl then
-						hl = Instance.new("Highlight")
-						hl.Name = "RoleHighlight"
-						hl.Parent = plr.Character
-					end
-					hl.FillColor = color
-					hl.OutlineColor = Color3.new(1, 1, 1)
-					hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-					hl.FillTransparency = 0.3
-					hl.OutlineTransparency = 0
+local function stopCoinFarm()
+	if coinFarmConnection then
+		coinFarmConnection:Disconnect()
+		coinFarmConnection = nil
+	end
+end
+
+local function startCoinFarm()
+	stopCoinFarm()
+	coinFarmConnection = RunService.Heartbeat:Connect(function()
+		if not flags.autoFarmCoin then
+			stopCoinFarm()
+			return
+		end
+		pcall(function()
+			local character = LocalPlayer.Character
+			local root = getRoot(character)
+			if not root then return end
+			
+			local coins = {}
+			for _, obj in ipairs(Workspace:GetDescendants()) do
+				if obj:IsA("BasePart") and obj.Name == "Coin_Server" then
+					table.insert(coins, obj)
 				end
 			end
-		end
+			
+			if #coins > 0 then
+				table.sort(coins, function(a, b)
+					return (root.Position - a.Position).Magnitude < (root.Position - b.Position).Magnitude
+				end)
+				
+				local targetCoin = coins[1]
+				local tween = TweenService:Create(root, coinTweenInfo, {CFrame = targetCoin.CFrame})
+				tween:Play()
+				tween.Completed:Wait()
+			end
+		end)
 	end)
-end
-
-local function getKnifeStabbedEvent()
-	for _, obj in pairs(getnilinstances()) do
-		if obj.Name == "KnifeStabbed" then return obj end
-	end
-	return nil
-end
-
-local function stopCoinFarmTween()
-	if coinFarmState.tween then
-		pcall(function() coinFarmState.tween:Cancel() end)
-		coinFarmState.tween = nil
-	end
-	coinFarmState.target = nil
 end
 
 local function clearFlyForces()
@@ -306,7 +282,6 @@ local function performAimbot()
 	end
 end
 
--- ESP Update
 local function updateESP()
 	local camera = Workspace.CurrentCamera
 	if not camera then return end
@@ -317,7 +292,6 @@ local function updateESP()
 		local character = plr.Character
 		if not character then continue end
 
-		-- Role Chams (Full Body Highlight)
 		if flags.espRoleChams then
 			local role = rolesCache[plr.Name] or "Innocent"
 			if role == "Hero" then role = "Sheriff" end
@@ -339,7 +313,6 @@ local function updateESP()
 			if hl then hl.Enabled = false end
 		end
 
-		-- Distance Text
 		if flags.espDistance and myRoot then
 			local root = getRoot(character)
 			if root then
@@ -378,12 +351,11 @@ Players.PlayerRemoving:Connect(function(player)
 	if textObj then textObj:Remove() distanceTexts[player] = nil end
 end)
 
--- Cleanup on UI close
 local function cleanupAll()
 	resetAllFlags()
 	clearAllESPHighlights()
 	clearFlyForces()
-	stopCoinFarmTween()
+	stopCoinFarm()
 	setXray(false)
 
 	for _, textObj in pairs(distanceTexts) do
@@ -410,7 +382,6 @@ if Window.Instance then
 	end)
 end
 
--- UI Construction
 do
 	if InfoTab then
 		pcall(function()
@@ -481,10 +452,10 @@ do
 				Title = "Auto Farm Coin",
 				Callback = function(state)
 					flags.autoFarmCoin = state
-					if not state then
-						if stopCoinFarmTween then
-							pcall(stopCoinFarmTween)
-						end
+					if state then
+						startCoinFarm()
+					else
+						stopCoinFarm()
 					end
 				end
 			})
@@ -653,7 +624,6 @@ end
 resetAllFlags()
 clearAllESPHighlights()
 
--- Main Loop
 RunService.Heartbeat:Connect(function()
 	getRoles()
 	updateESP()
@@ -764,7 +734,10 @@ LocalPlayer.CharacterAdded:Connect(function(newCharacter)
 	task.wait(0.2)
 
 	clearFlyForces()
-	stopCoinFarmTween()
+	if flags.autoFarmCoin then
+		stopCoinFarm()
+		startCoinFarm()
+	end
 
 	local humanoid = getHumanoid(newCharacter)
 	if humanoid then
