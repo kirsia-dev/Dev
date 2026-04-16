@@ -475,11 +475,22 @@ do
 			MainTab:Section({ Title = "Sheriff" })
 			MainTab:Toggle({ Title = "Auto Take Gun", Callback = function(state) flags.autoTakeGun = state end })
 		end)
-        pcall(function()
-	        MainTab:Section({ Title = "Farm" })
-            MainTab:Toggle({ Title = "Auto Farm Coin", Callback = function(state) flags.autoFarmCoin = state if not state then if stopCoinFarmTween then pcall(stopCoinFarmTween) end end end })
-            MainTab:Slider({ Title = "Coin Speed", Step = 1, Value = { Min = 1, Max = 100, Default = 25 }, Callback = function(value) cfg.coinSpeed = value end })
-        end)
+		pcall(function()
+			MainTab:Section({ Title = "Farm" })
+			MainTab:Toggle({
+				Title = "Auto Farm Coin",
+				Callback = function(state)
+					flags.autoFarmCoin = state
+					if not state then
+						if stopCoinFarmTween then
+							pcall(stopCoinFarmTween)
+						end
+					end
+				end
+			})
+			MainTab:Slider({ Title = "Coin Speed", Step = 1, Value = { Min = 1, Max = 100, Default = 25 }, Callback = function(value) cfg.coinSpeed = value end })
+		end)
+	end
 
 	local function updatePlayerDropdown()
 		if not playerDropdown then return end
@@ -647,56 +658,56 @@ RunService.Heartbeat:Connect(function()
 	getRoles()
 	updateESP()
 
-    if flags.killAll then
-	    pcall(function()
-		    for _, plr in pairs(Players:GetPlayers()) do
-			    if plr ~= LocalPlayer and plr.Character then
-				    local targetRoot = getRoot(plr.Character)
-				    local targetHumanoid = getHumanoid(plr.Character)
-				    if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
-					    safeTeleport(targetRoot.CFrame)
-					    task.wait(0.1)
-					    ReplicatedStorage.Remotes.Gameplay.MeleeHit:FireServer(targetHumanoid)
-				    end
-			    end
-		    end
-	    end)
+	if flags.killAll then
+		pcall(function()
+			for _, plr in pairs(Players:GetPlayers()) do
+				if plr ~= LocalPlayer and plr.Character then
+					local targetRoot = getRoot(plr.Character)
+					local targetHumanoid = getHumanoid(plr.Character)
+					if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
+						safeTeleport(targetRoot.CFrame)
+						task.wait(0.1)
+						ReplicatedStorage.Remotes.Gameplay.MeleeHit:FireServer(targetHumanoid)
+					end
+				end
+			end
+		end)
 	end
 
-    if flags.autoShoot then
-	    pcall(function()
-		    local roles = getRoles()
-		    for plr, role in pairs(roles) do
-			    if role == "Murderer" then
-				    local target = Players:FindFirstChild(plr)
-				    if target and target.Character then
-					    local root = getRoot(target.Character)
-					    if root then
-						    ReplicatedStorage.Remotes.Gameplay.ShootGun:FireServer(root.Position)
-					    end
-				    end
-				    break
-			    end
-		    end
-	    end)
+	if flags.autoShoot then
+		pcall(function()
+			local roles = getRoles()
+			for plr, role in pairs(roles) do
+				if role == "Murderer" then
+					local target = Players:FindFirstChild(plr)
+					if target and target.Character then
+						local root = getRoot(target.Character)
+						if root then
+							ReplicatedStorage.Remotes.Gameplay.ShootGun:FireServer(root.Position)
+						end
+					end
+					break
+				end
+			end
+		end)
 	end
 
 	if flags.aimbot then performAimbot() end
 
-    if flags.autoTakeGun then
-	    pcall(function()
-		    local myRoot = getRoot(LocalPlayer.Character)
-		    if myRoot then
-			    for _, obj in pairs(Workspace:GetDescendants()) do
-				    if obj.Name:lower():find("gun") then
-					    local part = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle")
-					    if part then
-						    safeTeleport(part.CFrame)
-					    end
-				    end
-			    end
-		    end
-	    end)
+	if flags.autoTakeGun then
+		pcall(function()
+			local myRoot = getRoot(LocalPlayer.Character)
+			if myRoot then
+				for _, obj in pairs(Workspace:GetDescendants()) do
+					if obj.Name:lower():find("gun") then
+						local part = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle")
+						if part then
+							safeTeleport(part.CFrame)
+						end
+					end
+				end
+			end
+		end)
 	end
 
 	if flags.espGunDrop then
