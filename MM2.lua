@@ -647,144 +647,115 @@ RunService.Heartbeat:Connect(function()
 	getRoles()
 	updateESP()
 
-	if flags.killAll then
-		pcall(function()
-			for _, plr in pairs(Players:GetPlayers()) do
-				if plr ~= LocalPlayer and plr.Character then
-					local targetRoot, targetHumanoid = getRoot(plr.Character), getHumanoid(plr.Character)
-					if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
-						safeTeleport(targetRoot.CFrame)
-						task.wait(0.15)
-						local knifeEvent = getKnifeStabbedEvent()
-						if knifeEvent then pcall(function() knifeEvent:FireServer() end) end
-					end
-				end
-			end
-		end)
+    if flags.killAll then
+	    pcall(function()
+		    for _, plr in pairs(Players:GetPlayers()) do
+			    if plr ~= LocalPlayer and plr.Character then
+				    local targetRoot = getRoot(plr.Character)
+				    local targetHumanoid = getHumanoid(plr.Character)
+				    if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
+					    safeTeleport(targetRoot.CFrame)
+					    task.wait(0.1)
+					    ReplicatedStorage.Remotes.Gameplay.MeleeHit:FireServer(targetHumanoid)
+				    end
+			    end
+		    end
+	    end)
 	end
 
-	if flags.autoShoot then
-		pcall(function()
-			local roles = getRoles()
-			for plr, role in pairs(roles) do
-				if role == "Murderer" then
-					local targetPlr = Players:FindFirstChild(plr)
-					if targetPlr and targetPlr.Character then
-						local targetRoot = getRoot(targetPlr.Character)
-						if targetRoot then
-							safeTeleport(targetRoot.CFrame)
-							task.wait(0.15)
-							local knifeEvent = getKnifeStabbedEvent()
-							if knifeEvent then pcall(function() knifeEvent:FireServer() end) end
-						end
-					end
-					break
-				end
-			end
-		end)
+    if flags.autoShoot then
+	    pcall(function()
+		    local roles = getRoles()
+		    for plr, role in pairs(roles) do
+			    if role == "Murderer" then
+				    local target = Players:FindFirstChild(plr)
+				    if target and target.Character then
+					    local root = getRoot(target.Character)
+					    if root then
+						    ReplicatedStorage.Remotes.Gameplay.ShootGun:FireServer(root.Position)
+					    end
+				    end
+				    break
+			    end
+		    end
+	    end)
 	end
 
 	if flags.aimbot then performAimbot() end
 
-	if flags.autoTakeGun then
-		pcall(function()
-			local gunFolder = Workspace:FindFirstChild("Guns")
-			if gunFolder and LocalPlayer.Character then
-				local myRoot = getRoot(LocalPlayer.Character)
-				if myRoot then
-					for _, gun in pairs(gunFolder:GetChildren()) do
-						local gunPart = gun:FindFirstChild("Handle") or (gun:IsA("BasePart") and gun)
-						if gunPart and gunPart.Parent and (myRoot.Position - gunPart.Position).Magnitude < 150 then
-							safeTeleport(gunPart.CFrame, Vector3.new(0, 1, 0))
-							task.wait(0.1)
-							pcall(function() ReplicatedStorage.Remotes.Gameplay.GiveWeapon:FireServer("Gun") end)
-						end
-					end
-				end
-			end
-		end)
+    if flags.autoTakeGun then
+	    pcall(function()
+		    local myRoot = getRoot(LocalPlayer.Character)
+		    if myRoot then
+			    for _, obj in pairs(Workspace:GetDescendants()) do
+				    if obj.Name:lower():find("gun") then
+					    local part = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle")
+					    if part then
+						    safeTeleport(part.CFrame)
+					    end
+				    end
+			    end
+		    end
+	    end)
 	end
 
-	if flags.autoFarmCoin then
-		pcall(function()
-			if isBagFull() then
-				flags.autoFarmCoin = false
-				stopCoinFarmTween()
-				notify("Auto Farm Coin", "Inventory full, farming stopped")
-				return
-			end
-			local coinFolder = Workspace:FindFirstChild("Coins") or Workspace:FindFirstChild("DroppedCoin")
-			if coinFolder and LocalPlayer.Character then
-				local myRoot = getRoot(LocalPlayer.Character)
-				if myRoot then
-					for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-						if part:IsA("BasePart") then part.CanCollide = false end
-					end
-					local nearest, minDist = nil, math.huge
-					for _, coin in pairs(coinFolder:GetChildren()) do
-						local coinPart = coin:IsA("BasePart") and coin or coin:FindFirstChild("HumanoidRootPart")
-						if coinPart and coinPart.Parent then
-							local dist = (myRoot.Position - coinPart.Position).Magnitude
-							if dist < minDist then minDist = dist; nearest = coinPart end
-						end
-					end
-					if nearest and nearest.Parent then
-						if minDist <= 5 then
-							stopCoinFarmTween()
-							if (tick() - coinFarmState.lastCollect) > 0.1 then
-								coinFarmState.lastCollect = tick()
-								pcall(function() ReplicatedStorage.Remotes.Gameplay.CoinCollected:FireServer("Coin", 1, 50, { Value = 1 }) end)
-							end
-						else
-							local shouldRetarget = (coinFarmState.target ~= nearest) or (not coinFarmState.tween)
-							if coinFarmState.tween and not shouldRetarget then
-								local state = coinFarmState.tween.PlaybackState
-								if state == Enum.PlaybackState.Completed or state == Enum.PlaybackState.Cancelled then
-									shouldRetarget = true
-								end
-							end
-							if shouldRetarget then
-								stopCoinFarmTween()
-								coinFarmState.target = nearest
-								local targetCFrame = CFrame.new(nearest.Position + Vector3.new(0, 3, 0))
-								local tweenDuration = math.clamp(minDist / math.max(cfg.coinSpeed, 5), 0.1, 2)
-								coinFarmState.tween = TweenService:Create(myRoot, TweenInfo.new(tweenDuration, Enum.EasingStyle.Linear), { CFrame = targetCFrame })
-								pcall(function() coinFarmState.tween:Play() end)
-							end
-						end
-					else
-						stopCoinFarmTween()
-					end
-				end
-			end
-		end)
+    if flags.autoFarmCoin then
+	    pcall(function()
+		    local character = LocalPlayer.Character
+		    local myRoot = character and character:FindFirstChild("HumanoidRootPart")
+		    if not myRoot then return end
+
+		    local coinFolder = Workspace:FindFirstChild("Coins") 
+			    or Workspace:FindFirstChild("CoinContainer") 
+			    or Workspace:FindFirstChild("DroppedCoins") 
+			    or Workspace:FindFirstChild("Coin")
+
+		    if not coinFolder then return end
+
+		    local nearestCoin = nil
+		    local shortestDistance = math.huge
+
+		    for _, coin in pairs(coinFolder:GetDescendants()) do
+			    if coin:IsA("BasePart") then
+				    local distance = (myRoot.Position - coin.Position).Magnitude
+				    if distance < shortestDistance then
+					    shortestDistance = distance
+					    nearestCoin = coin
+				    end
+			    end
+		    end
+
+		    if nearestCoin then
+			    myRoot.CFrame = nearestCoin.CFrame + Vector3.new(0, 2, 0)
+
+			    firetouchinterest(myRoot, nearestCoin, 0)
+			    firetouchinterest(myRoot, nearestCoin, 1)
+		    end
+	    end)
 	end
 
-	if flags.espRole then applyRoleESP() end
 
-	if flags.espGunDrop then
-		pcall(function()
-			local gunFolder = Workspace:FindFirstChild("Guns")
-			if gunFolder then
-				for _, gun in pairs(gunFolder:GetChildren()) do
-					if gun:IsA("BasePart") or gun:FindFirstChild("Handle") then
-						local gunParent = gun:IsA("BasePart") and gun or gun:FindFirstChild("Handle")
-						if gunParent and gunParent.Parent and not gunParent:FindFirstChild("GunHighlight") then
-							local hl = Instance.new("Highlight")
-							hl.Name = "GunHighlight"
-							hl.FillColor = Color3.fromRGB(255, 200, 0)
-							hl.OutlineColor = Color3.fromRGB(200, 160, 0)
-							hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-							hl.FillTransparency = 0.4
-							hl.Parent = gunParent
-						end
-					end
+
+	if flags.fly and LocalPlayer.Charaif flags.espGunDrop then
+	pcall(function()
+		for _, obj in pairs(Workspace:GetDescendants()) do
+			if obj.Name:lower():find("gun") then
+				local part = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle")
+				if part and not part:FindFirstChild("GunHighlight") then
+					local hl = Instance.new("Highlight")
+					hl.Name = "GunHighlight"
+					hl.FillColor = Color3.fromRGB(255, 200, 0)
+					hl.OutlineColor = Color3.fromRGB(200, 160, 0)
+					hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+					hl.FillTransparency = 0.4
+					hl.Parent = part
 				end
 			end
-		end)
-	end
-
-	if flags.fly and LocalPlayer.Character then
+		end
+	end)
+		end
+			
+		cter then
 		local myRoot, humanoid = getRoot(LocalPlayer.Character), getHumanoid(LocalPlayer.Character)
 		if myRoot and humanoid then
 			ensureFlyForces(myRoot)
