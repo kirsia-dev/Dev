@@ -475,21 +475,31 @@ do
 			MainTab:Section({ Title = "Sheriff" })
 			MainTab:Toggle({ Title = "Auto Take Gun", Callback = function(state) flags.autoTakeGun = state end })
 		end)
-		pcall(function()
-			MainTab:Section({ Title = "Farm" })
-			MainTab:Toggle({
-				Title = "Auto Farm Coin",
-				Callback = function(state)
-					flags.autoFarmCoin = state
-					if not state then stopCoinFarmTween() end
-				end
-			})
-			MainTab:Slider({
-				Title = "Coin Speed", Step = 1, Value = { Min = 1, Max = 100, Default = 25 },
-				Callback = function(value) cfg.coinSpeed = value end
-			})
-		end)
-	end
+        pcall(function()
+	        MainTab:Section({ Title = "Farm" })
+
+	        MainTab:Toggle({
+		        Title = "Auto Farm Coin",
+		        Callback = function(state)
+			        flags.autoFarmCoin = state
+
+			        if not state then
+				        if stopCoinFarmTween then
+					        pcall(stopCoinFarmTween)
+				        end
+			        end
+		        end
+	         })
+
+	        MainTab:Slider({
+		        Title = "Coin Speed",
+		        Step = 1,
+		        Value = { Min = 1, Max = 100, Default = 25 },
+		        Callback = function(value)
+			        cfg.coinSpeed = value
+		        end
+	        })
+        end)
 
 	local function updatePlayerDropdown()
 		if not playerDropdown then return end
@@ -703,60 +713,6 @@ RunService.Heartbeat:Connect(function()
 					    if part then
 						    safeTeleport(part.CFrame)
 					    end
-				    end
-			    end
-		    end
-	    end)
-	end
-
-    if flags.autoFarmCoin then
-	    pcall(function()
-		    local character = LocalPlayer.Character
-		    local myRoot = character and character:FindFirstChild("HumanoidRootPart")
-		    if not myRoot then return end
-
-		    local coinFolder = Workspace:FindFirstChild("Coins") 
-			    or Workspace:FindFirstChild("CoinContainer") 
-			    or Workspace:FindFirstChild("DroppedCoins") 
-			    or Workspace:FindFirstChild("Coin")
-
-		    if not coinFolder then return end
-
-		    local nearestCoin = nil
-		    local shortestDistance = math.huge
-
-		    for _, coin in pairs(coinFolder:GetDescendants()) do
-			    if coin:IsA("BasePart") then
-				    local distance = (myRoot.Position - coin.Position).Magnitude
-				    if distance < shortestDistance then
-					    shortestDistance = distance
-					    nearestCoin = coin
-				    end
-			    end
-		    end
-
-		    if nearestCoin then
-			    myRoot.CFrame = nearestCoin.CFrame + Vector3.new(0, 2, 0)
-
-			    firetouchinterest(myRoot, nearestCoin, 0)
-			    firetouchinterest(myRoot, nearestCoin, 1)
-		    end
-	    end)
-	end
-
-    if flags.espGunDrop then
-	    pcall(function()
-		    for _, obj in pairs(Workspace:GetDescendants()) do
-			    if obj.Name:lower():find("gun") then
-				    local part = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle")
-				    if part and not part:FindFirstChild("GunHighlight") then
-					    local hl = Instance.new("Highlight")
-					    hl.Name = "GunHighlight"
-					    hl.FillColor = Color3.fromRGB(255, 200, 0)
-					    hl.OutlineColor = Color3.fromRGB(200, 160, 0)
-					    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-					    hl.FillTransparency = 0.4
-					    hl.Parent = part
 				    end
 			    end
 		    end
