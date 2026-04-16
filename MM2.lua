@@ -751,10 +751,15 @@ end)
 
 LocalPlayer.CharacterAdded:Connect(function(newCharacter)
 	task.wait(0.2)
+
 	clearFlyForces()
 	stopCoinFarmTween()
+
 	local humanoid = getHumanoid(newCharacter)
-	if humanoid then humanoid.WalkSpeed, humanoid.JumpPower = cfg.speedHack, cfg.jumpPower end
+	if humanoid then
+		humanoid.WalkSpeed = cfg.speedHack
+		humanoid.JumpPower = cfg.jumpPower
+	end
 end)
 
 notify("ZyphraxHub MM2", "Script loaded successfully!")
