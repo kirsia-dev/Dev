@@ -4878,169 +4878,20 @@ local Library = FlowUI.new({
 })
 
 local Tabs = {
-    Information = Window:AddTab("Information", "info"),
-    Priority = Window:AddTab("Priority", "arrow-up-down"),
-	Main = Window:AddTab("Main", "box"),
-    Automation = Window:AddTab("Automation", "repeat-2"),
-    Artifact = Window:AddTab("Artifact", "martini"),
-    Dungeon = Window:AddTab("Dungeon", "door-open"),
-    Player = Window:AddTab("Player", "user"),
-    Teleport = Window:AddTab("Teleport", "map-pin"),
-    Webhook = Window:AddTab("Webhook", "send"),
-    Misc = Window:AddTab("Misc", "apple"),
-    Config = Window:AddTab("Config", "cog"),
+    Information = library:AddTab("Information", "info"),
+    Priority = library:AddTab("Priority", "arrow-up-down"),
+	Main = library:AddTab("Main", "landmark"),
+    Automation = library:AddTab("Automation", "repeat-2"),
+    Artifact = library:AddTab("Artifact", "martini"),
+    Dungeon = library:AddTab("Dungeon", "door-open"),
+    Player = library:AddTab("Player", "user"),
+    Teleport = library:AddTab("Teleport", "map-pin"),
+    Webhook = library:AddTab("Webhook", "send"),
+    Misc = library:AddTab("Misc", "settings-2"),
+    Config = library:AddTab("Config", "cog"),
 }
 
-local GB = {
-    Information = {
-        Left = {
-            User = Tabs.Information:AddLeftGroupbox("User", "user"),
-            Game = Tabs.Information:AddLeftGroupbox("Game", "gamepad"),
-        },
-        Right = {
-            Others = Tabs.Information:AddRightGroupbox("Others", "boxes"),
-        },
-    },
-    Priority = {
-        Left = {
-            Config = Tabs.Priority:AddLeftGroupbox("Config", "wrench"),
-        },
-    },
-    Artifact = {
-        Left = {
-            Status = Tabs.Artifact:AddLeftGroupbox("Status", "info"),
-            Equip = Tabs.Artifact:AddLeftGroupbox("Auto-Equip", "kayak"),
-            Upgrade = Tabs.Artifact:AddLeftGroupbox("Upgrade", "hammer"),
-        },
-        Right = {
-            Lock = Tabs.Artifact:AddRightGroupbox("Lock", "lock"),
-            Delete = Tabs.Artifact:AddRightGroupbox("Delete", "trash"),
-        },
-    },
-    Player = {
-        Left = {
-            General = Tabs.Player:AddLeftGroupbox("General", "user-cog"),
-            Server = Tabs.Player:AddLeftGroupbox("Server", "server"),
-        },
-        Right = {
-            Game = Tabs.Player:AddRightGroupbox("Game", "earth"),
-            Safety = Tabs.Player:AddRightGroupbox("Safety", "shield"),
-        },
-    },
-    Webhook = {
-        Left = {
-            Config = Tabs.Webhook:AddLeftGroupbox("Config", "wrench"),
-        },
-    }
-}
 
-local TB = {
-    Main = {
-        Left = {
-            Autofarm = Tabs.Main:AddLeftTabbox(),
-            MiscAuto = Tabs.Main:AddLeftTabbox(),
-        },
-        Right = {
-            Switch = Tabs.Main:AddRightTabbox(),
-            MiscAuto = Tabs.Main:AddRightTabbox(),
-        },
-    },
-    Automation = {
-        Left = {
-            Misc1 = Tabs.Automation:AddLeftTabbox(),
-            Stats1 = Tabs.Automation:AddLeftTabbox(),
-        },
-        Right = {
-            Enchant = Tabs.Automation:AddRightTabbox(),
-        },
-    },
-    Teleport = {
-        Left = {
-            Waypoint = Tabs.Teleport:AddLeftTabbox(),
-        },
-        Right = {
-            NPCs = Tabs.Teleport:AddRightTabbox(),
-        },
-    },
-    Dungeon = {
-        Left = {
-            Autojoin = Tabs.Dungeon:AddLeftTabbox(),
-        },
-        Right = {
-
-        },
-    },
-    Misc = {
-        Left = {
-            Merchant = Tabs.Misc:AddLeftTabbox(),
-            Misc1 = Tabs.Misc:AddLeftTabbox(),
-        },
-        Right = {
-            Quests = Tabs.Misc:AddRightTabbox(),
-        },
-    },
-}
-
-local TB_Tabs = {
-    Autofarm = {
-        T1 = TB.Main.Left.Autofarm:AddTab("Autofarm"),
-        T2 = TB.Main.Left.Autofarm:AddTab("Boss"),
-        T3 = TB.Main.Left.Autofarm:AddTab("Misc"),
-        T4 = TB.Main.Left.Autofarm:AddTab("Config"),
-    },
-    MiscAuto = {
-        T1 = TB.Main.Left.MiscAuto:AddTab("Haki"),
-        T2 = TB.Main.Left.MiscAuto:AddTab("Skill"),
-        T3 = TB.Main.Left.MiscAuto:AddTab("Combo"),
-    },
-    Switch = {
-        T1 = TB.Main.Right.Switch:AddTab("Title"),
-        T2 = TB.Main.Right.Switch:AddTab("Rune"),
-        T3 = TB.Main.Right.Switch:AddTab("Build"),
-    },
-    MiscAuto_Left = {
-        T1 = TB.Automation.Left.Misc1:AddTab("Ascend"),
-        T2 = TB.Automation.Left.Misc1:AddTab("Rolls"),
-        T3 = TB.Automation.Left.Misc1:AddTab("Trade"),
-    },
-    Stats1 = {
-        T1 = TB.Automation.Left.Stats1:AddTab("Level"),
-        T2 = TB.Automation.Left.Stats1:AddTab("Gem"),
-        T3 = TB.Automation.Left.Stats1:AddTab("Misc"),
-    },
-    Enchant = {
-        T1 = TB.Automation.Right.Enchant:AddTab("Enchant"),
-        T2 = TB.Automation.Right.Enchant:AddTab("Passive"),
-        T3 = TB.Automation.Right.Enchant:AddTab("Config"),
-    },
-    Dungeon = {
-        T1 = TB.Dungeon.Left.Autojoin:AddTab("Autojoin"),
-        T2 = TB.Dungeon.Left.Autojoin:AddTab("Config"),
-    },
-    Waypoint = {
-        T1 = TB.Teleport.Left.Waypoint:AddTab("Island"),
-        T2 = TB.Teleport.Left.Waypoint:AddTab("Quest"),
-        T3 = TB.Teleport.Left.Waypoint:AddTab("Misc"),
-    },
-    NPCs = {
-        T1 = TB.Teleport.Right.NPCs:AddTab("Moveset"),
-        T2 = TB.Teleport.Right.NPCs:AddTab("Mastery"),
-    },
-    Merchant = {
-        T1 = TB.Misc.Left.Merchant:AddTab("Regular"),
-        T2 = TB.Misc.Left.Merchant:AddTab("Dungeon"),
-        T3 = TB.Misc.Left.Merchant:AddTab("Valentine"),
-    },
-    Misc1 = {
-        T1 = TB.Misc.Left.Misc1:AddTab("Chests"),
-        T2 = TB.Misc.Left.Misc1:AddTab("Craft"),
-        T3 = TB.Misc.Left.Misc1:AddTab("Notify"),
-    },
-    Puzzle = {
-        T1 = TB.Misc.Right.Quests:AddTab("Puzzles"),
-        T2 = TB.Misc.Right.Quests:AddTab("Questlines"),
-    },
-}
 
 local function GetJunkieData()
     local premium = true
@@ -5079,9 +4930,15 @@ task.spawn(function()
     end
 end)
 
-GB.Information.Left.User:AddLabel("<b>Executor:</b> " .. executorDisplayName .. "\n<b>Status:</b> " .. statusText .. "\n" .. extraNote, true)
+local StatsGroup = Tabs.Information:AddGroup({
+    Name = "Stats",
+    Side = "Left",
+    Icon = "chart-no-axes-combined"
+})
 
-GB.Information.Left.Game:AddButton("Redeem All Codes", function()
+StatsGroup:AddLabel("<b>Executor:</b> " .. executorDisplayName .. "\n<b>Status:</b> " .. statusText .. "\n" .. extraNote, true)
+
+StatsGroup:AddButton("Redeem All Codes", function()
     local allCodes = Modules.Codes.Codes
     local playerLevel = Plr.Data.Level.Value
     
@@ -5117,19 +4974,26 @@ GB.Information.Left.Game:AddButton("Redeem All Codes", function()
     end
 end)
 
-GB.Information.Right.Others:AddLabel("<b>Community Support</b>", true)
-GB.Information.Right.Others:AddLabel("<b>Update</b>: Every time there is a game update or someone reports something, I will fix it as soon as possible.", true)
-
-GB.Information.Right.Others:AddButton({ 
-    Text = "Discord",
-    Func = function() setclipboard("https://discord.gg/vorahub") end,
-    Disabled = not Support.Clipboard,
-    DisabledTooltip = "Missing function: setclipboard"
+local Infomation = Tabs.Information:AddGroup({
+    Name = "Infomation",
+    Side = "Right",
+    Icon = "message-circle"
 })
 
-GB.Information.Right.Others:AddButton({ 
+Infomation:AddLabel("<b>Community Support</b>", true)
+Infomation:AddLabel("<b>Update</b>: Every time there is a game update or someone reports something, I will fix it as soon as possible.", true)
+
+Infomation:AddButton({ 
+    Name = "Discord",
+    Side = "Left",
+    Callback = function() 
+	    setclipboard("https://discord.gg/vorahub")
+    end,
+})
+
+Infomation:AddButton({ 
     Text = "Join Discord Server",
-    Func = function()
+    Callback = function()
         local inviteCode = "vorahub"
         local inviteLink = "https://discord.gg/" .. inviteCode
 
