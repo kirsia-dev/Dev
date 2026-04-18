@@ -1,192 +1,3 @@
-if not game:IsLoaded() then game.Loaded:Wait() end
-
--- 1. Anti-Tamper & Service Protection
- cloneref = cloneref or function(o) return o end
- HttpService = cloneref(game:GetService("HttpService"))
- StarterGui = cloneref(game:GetService("StarterGui"))
- Players = cloneref(game:GetService("Players"))
- RbxAnalyticsService = cloneref(game:GetService("RbxAnalyticsService"))
- LocalPlayer = Players.LocalPlayer
-local API_ENDPOINT = "https://api.vorahub.xyz/redeem"
-
--- 2. Secure Request Function (Local Only)
--- Amankan fungsi critical
-local _original_request = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-
--- Coba restore function asli jika didukung (Anti-Hook Level 1)
-if restorefunction then
-    pcall(function()
-        restorefunction(_original_request) 
-    end)
-end
-
- function is_tampered(func)
-    if not func then return false end
-    
-    -- Cek Closure Type (Anti-Hook Level 2)
-    local isCKey = false
-    pcall(function()
-        if iscclosure and iscclosure(func) then isCKey = true end
-    end)
-    
-    -- Jika executor aslinya CClosure tapi sekarang LClosure -> TEMBAK!
-    if islclosure and islclosure(func) then
-        return true -- High probability hooked!
-    end
-
-    return false
-end
-
- function makeRequest(url, payload)
-    local req = _original_request
-    if not req then return "unsupported" end
-    
-    local success, response = pcall(function()
-        return req({
-            Url = url,
-            Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json",
-                ["User-Agent"] = "VoraHub-Client/1.0"
-            },
-            Body = payload
-        })
-    end)
-    
-    if success and response and type(response) == "table" then
-         if not response.StatusCode or not response.Body then
-             return nil
-         end
-    end
-    
-    return (success and response) and response.Body or nil
-end
-
- function getExecutorName()
-    local ok, name = pcall(function()
-        if identifyexecutor then
-            return identifyexecutor()
-        end
-        return nil
-    end)
-    return (ok and name and type(name) == "string" and name ~= "" and name) or "Unknown"
-end
-
-function redeem(key)
-    key = (key or ""):gsub("%s+", ""):upper()
-    if #key < 6 then return false end
-
-    task.wait(math.random(1, 4) / 10)
-    
-    local HWID = RbxAnalyticsService:GetClientId()
-    local payload = HttpService:JSONEncode({
-        key = key,
-        hwid = HWID,
-        username = LocalPlayer.Name,
-        executor = getExecutorName(),
-        gameId = game.GameId,
-        placeId = game.PlaceId,
-        timestamp = tick()
-    })
-
-    local response = makeRequest(API_ENDPOINT, payload)
-
-    if not response then return "connection_error" end
-    if response == "unsupported" then return "unsupported" end
-
-    local ok, data = pcall(function() return HttpService:JSONDecode(response) end)
-    
-    if not ok or not data or not data.status then return "invalid_response" end
-
-    if data.status == "premium" then return true end
-    if data.status == "kick" or data.reason == "HWID_LIMIT" then return "hwid_limit" end
-    return false -- Invalid key
-end
-
--- 4. Execution Flow (Hardened)
- key = (_G.script_key and tostring(_G.script_key)) or ""
-
--- Anti-Tamper Check (Advanced)
-if is_tampered and is_tampered(_original_request) then
-    LocalPlayer:Kick("Security Breach: Request Hook Detected (Code: TAMPER-01)")
-    while true do end
-end
-
-if #key < 6 then
-    StarterGui:SetCore("SendNotification", {Title = "VORAHUB", Text = "Key Invalid / Expired", Duration = 5})
-    task.wait(2)
-    LocalPlayer:Kick("[VORAHUB] INVALID KEY\nGet key at: discord.gg/vorahub")
-    task.wait(9e9)
-    return
-end
-
--- [SECURITY STRATEGY] Randomized Request Shuffling
--- Prevents crackers from filtering based on static order (e.g. "Always hook 2nd request")
-function generateFakeKey()
-    local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    local k = ""
-    for i = 1, 16 do
-        local r = math.random(1, #chars)
-        k = k .. chars:sub(r, r)
-    end
-    return k
-end
-
-StarterGui:SetCore("SendNotification", {Title = "VORAHUB", Text = "Validating Key...", Duration = 3})
-
- realKeyData = { type = "REAL", payload = key }
-local fakeKeyData = { type = "FAKE", payload = generateFakeKey() }
-local securityChecks = { realKeyData, fakeKeyData }
-
--- Shuffle (Fisher-Yates)
-for i = #securityChecks, 2, -1 do
-    local j = math.random(i)
-    securityChecks[i], securityChecks[j] = securityChecks[j], securityChecks[i]
-end
-
-local finalRealResult = nil
-local securityBreach = false
-
-for i, check in ipairs(securityChecks) do
-    local res = redeem(check.payload)
-    
-    if check.type == "FAKE" then
-        -- If Fake Key returns TRUE (Valid), then someone HOOKED the response!
-        if res == true then
-            securityBreach = true
-        end
-    elseif check.type == "REAL" then
-        finalRealResult = res
-    end
-end
-
-if securityBreach then
-    LocalPlayer:Kick("Security Breach: Hook Detected (Error H-02)")
-    task.wait(9e9)
-    return
-end
-
-local result = finalRealResult
-
-if result == true then
-    StarterGui:SetCore("SendNotification", {Title = "VORAHUB PREMIUM", Text = "Key Valid! Loading...", Duration = 5})
-    -- Script continues execution below...
-elseif result == "hwid_limit" then
-    LocalPlayer:Kick("[VORAHUB] HWID LIMIT REACHED")
-    task.wait(9e9)
-    return
-elseif result == "connection_error" then
-    LocalPlayer:Kick("[VORAHUB] CONNECTION ERROR")
-    task.wait(9e9)
-    return
-else
-    StarterGui:SetCore("SendNotification", {Title = "VORAHUB", Text = "Key Invalid / Expired", Duration = 5})
-    task.wait(2)
-    LocalPlayer:Kick("[VORAHUB] INVALID KEY\nGet key at: discord.gg/vorahub")
-    task.wait(9e9)
-    return
-end
-
 if getgenv().vorahub_Running then
     warn("Script already running!")
     return
@@ -268,10 +79,6 @@ for _, name in ipairs(LimitedExecutors) do
     end
 end
 
-local repo = loadstring(game:HttpGet("https://raw.githubusercontent.com/Andrazx23/voralib/refs/heads/main/flow%20ui/ui.lua"))()
-
--- Re-entrancy guard: ThemeManager ColorPicker OnChanged -> ThemeUpdate -> UpdateColorsUsingRegistry
--- while the outer UpdateColorsUsingRegistry is still iterating Registry caused C stack overflow.
 do
 	local _UpdateColors = Library.UpdateColorsUsingRegistry
 	local updatingColors = false
@@ -288,7 +95,6 @@ do
 	end
 end
 
--- Defer all in-game Linoria toasts so Notify/New/FillInstance never nest under theme/DPI/resize work.
 do
 	local _Notify = Library.Notify
 	function Library:Notify(...)
@@ -5137,23 +4943,13 @@ local function Func_ArtifactAutomation()
     end
 end
 
-local Window = Library:CreateWindow({
-	Title = "VoraHub",
-	Footer = tostring(assetName),
-	NotifySide = "Right",
-    -- Vora logo
-    Icon = "116918679098324",
-    IconOnlyWindow = true,
-    IconOnlyTabs = false,
-	ShowCustomCursor = false,
-	AutoShow = true,
-	Center = true,
-	EnableSidebarResize = false,
-    SidebarCompactWidth = 56,
-    SidebarMinWidth = 156,
-    SidebarCollapseThreshold = 0.5,
-    SearchbarSize = UDim2.fromScale(1, 1),
-    Font = Enum.Font.RobotoMono,
+local FlowUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Andrazx23/voralib/refs/heads/main/flow%20ui/ui.lua"))()
+
+local Library = FlowUI.new({
+    Name = "VoraHub",
+    AccentColor = Color3.fromRGB(0, 140, 210),
+    AutoConfig = true,
+    Keybind = Enum.KeyCode.RightControl
 })
 
 local Tabs = {
