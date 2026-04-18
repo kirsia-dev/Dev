@@ -79,8 +79,6 @@ for _, name in ipairs(LimitedExecutors) do
     end
 end
 
-
-
 local omg = {
     13820188365,
     13413231458,
@@ -7513,48 +7511,3 @@ end)
 -- ThemeManager:ApplyToTab already ran LoadDefault() inside CreateThemeManager.
 -- Re-apply Vora scheme after built-in theme load (avoid second LoadDefault -> ApplyTheme -> SetValueRGB chain).
 ApplyVoraTheme()
-
--- Apply DPI first, then toasts on later frames (SetDPIScale touches every KeyPicker + Tab resize).
-task.defer(function()
-    if UIS.TouchEnabled and not UIS.KeyboardEnabled then
-        Library:SetDPIScale(75)
-    elseif UIS.KeyboardEnabled then
-        Library:SetDPIScale(100)
-    end
-end)
-task.defer(function()
-    task.wait()
-    if UIS.TouchEnabled and not UIS.KeyboardEnabled then
-        Library:Notify("Device detected: Phone\nResized DPI Scale for smaller UI.", 3)
-    elseif UIS.KeyboardEnabled then
-        local keyStr = "U"
-        pcall(function()
-            if Options.MenuKeybind and Options.MenuKeybind.Value ~= nil then
-                keyStr = tostring(Options.MenuKeybind.Value)
-            end
-        end)
-        Library:Notify("Device detected: PC\nPress " .. keyStr .. " to show/hide UI.", 10)
-    end
-end)
-
-task.spawn(function()
-    task.wait(0.1)
-    if Toggles.AutoShowUI.Value == false then
-        Library:Toggle()
-    end
-end)
-
-task.defer(function()
-    task.wait()
-    Library:Notify("Script loaded.", 2)
-end)
-task.defer(function()
-    task.wait()
-    Library:Notify("Report bug and give suggestion in Discord!", 5)
-end)
-
-if not eh_success then
-    task.defer(function()
-        Library:Notify("ERROR: " .. tostring(err), 4)
-    end)
-end
