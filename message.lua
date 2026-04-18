@@ -7553,8 +7553,6 @@ task.defer(function()
     Library:Notify("Report bug and give suggestion in Discord!", 5)
 end)
 
-end)
-
 if not eh_success then
     task.defer(function()
         Library:Notify("ERROR: " .. tostring(err), 4)
