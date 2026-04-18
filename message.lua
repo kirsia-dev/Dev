@@ -268,8 +268,7 @@ for _, name in ipairs(LimitedExecutors) do
     end
 end
 
-local repo = "https://raw.githubusercontent.com/Andrazx23/voralib/refs/heads/main/"
-local Library = loadstring(game:HttpGet(repo .. "newlib.lua"))()
+local repo = loadstring(game:HttpGet("https://raw.githubusercontent.com/Andrazx23/voralib/refs/heads/main/flow%20ui/ui.lua"))()
 
 -- Re-entrancy guard: ThemeManager ColorPicker OnChanged -> ThemeUpdate -> UpdateColorsUsingRegistry
 -- while the outer UpdateColorsUsingRegistry is still iterating Registry caused C stack overflow.
@@ -301,9 +300,6 @@ do
 		end)
 	end
 end
-
-local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
-local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
 
 getgenv().vorahub_Running = true
 
